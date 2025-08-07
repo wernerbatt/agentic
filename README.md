@@ -1,4 +1,4 @@
-# codex
+# Asynchronous coding agents
 
 This repository contains a collection of mini-projects and games.
 
