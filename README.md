@@ -1,6 +1,6 @@
 # Asynchronous coding agents
 
-This repository contains a collection of mini-projects and games.
+This repository contains a collection of mini-projects and games built using asynchronous coding agents
 
 ## Games
 
