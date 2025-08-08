@@ -1,5 +1,5 @@
 import unittest
-from blackjack import Deck, Hand
+from blackjack import Deck, Hand, Bankroll
 
 class TestDeck(unittest.TestCase):
     """
@@ -90,6 +90,28 @@ class TestHand(unittest.TestCase):
 
         hand.add_card(('8', 'Spades'))
         self.assertEqual(hand.value, 21) # 11 + 1 + 1 + 8
+
+
+class TestBankroll(unittest.TestCase):
+    """Test suite for the Bankroll class."""
+
+    def test_bet_and_win(self):
+        bank = Bankroll(100)
+        bank.bet(10)
+        self.assertEqual(bank.amount, 90)
+        bank.win(10)
+        self.assertEqual(bank.amount, 110)
+
+    def test_push(self):
+        bank = Bankroll(50)
+        bank.bet(20)
+        bank.push(20)
+        self.assertEqual(bank.amount, 50)
+
+    def test_invalid_bet(self):
+        bank = Bankroll(5)
+        with self.assertRaises(ValueError):
+            bank.bet(10)
 
 if __name__ == '__main__':
     unittest.main()
