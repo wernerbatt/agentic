@@ -204,7 +204,6 @@ def play_game():
         if bankroll.amount < bet:
             print("You're out of money!")
             break
-
         # rebuild deck if low on cards
         if len(deck.cards) < 15:
             deck.build()
