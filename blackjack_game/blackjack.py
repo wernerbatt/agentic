@@ -133,21 +133,16 @@ class Hand:
         return ", ".join([f"{rank} of {suit}" for rank, suit in self.cards])
 
 def play_game():
-    """Main loop for a Blackjack session with bankroll management."""
+    """Main loop for a Blackjack session with a fixed bet."""
     deck = Deck()
     deck.shuffle()
     bankroll = Bankroll()
+    bet = 10
 
-    while bankroll.amount > 0:
-        print(f"\nBankroll: ${bankroll.amount}")
-        # Get player's bet
-        while True:
-            try:
-                bet = int(input(f"Place your bet (1-{bankroll.amount}): "))
-                bankroll.bet(bet)
-                break
-            except ValueError:
-                print("Invalid bet amount.")
+    while bankroll.amount >= bet:
+        print(f"\nBankroll: £{bankroll.amount}")
+        bankroll.bet(bet)
+        print(f"Betting £{bet}")
 
         player_hand = Hand()
         dealer_hand = Hand()
@@ -171,7 +166,13 @@ def play_game():
                 break
 
             print("Do you want to (h)it or (s)tand? ", end="", flush=True)
-            choice = getch().lower()
+            choice = getch()
+            if choice == "\x1b":
+                bankroll.push(bet)
+                print("\nExiting game.")
+                print(f"Final bankroll: £{bankroll.amount}")
+                return
+            choice = choice.lower()
             print(choice)
             if choice == "h":
                 player_hand.add_card(deck.deal())
@@ -200,22 +201,15 @@ def play_game():
         elif result == "push":
             bankroll.push(bet)
 
-        if bankroll.amount <= 0:
+        if bankroll.amount < bet:
             print("You're out of money!")
             break
-
-        print("Play another round? (y/n): ", end="", flush=True)
-        cont = getch().lower()
-        print(cont)
-        if cont != "y":
-            break
-
         # rebuild deck if low on cards
         if len(deck.cards) < 15:
             deck.build()
             deck.shuffle()
 
-    print(f"Final bankroll: ${bankroll.amount}")
+    print(f"Final bankroll: £{bankroll.amount}")
 
 
 def determine_winner(player_hand, dealer_hand):
