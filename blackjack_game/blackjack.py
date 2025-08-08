@@ -33,10 +33,15 @@ class Deck:
     def deal(self):
         """
         Deals one card from the top of the deck.
+
+        Raises
+        ------
+        IndexError
+            If the deck is empty.
         """
-        if len(self.cards) > 0:
-            return self.cards.pop()
-        return None
+        if not self.cards:
+            raise IndexError("All cards have been dealt")
+        return self.cards.pop()
 
 class Hand:
     """
