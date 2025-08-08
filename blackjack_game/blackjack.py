@@ -126,11 +126,105 @@ class Hand:
             aces -= 1
         return value
 
+    def is_pair(self):
+        """Return True if the hand is a pair."""
+        return len(self.cards) == 2 and self.cards[0][0] == self.cards[1][0]
+
+    def is_soft(self):
+        """Return True if the hand is a soft hand (contains an ace counted as 11)."""
+        total = 0
+        aces = 0
+        for rank, _ in self.cards:
+            if rank == "A":
+                aces += 1
+            elif rank in ("J", "Q", "K") or rank == "10":
+                total += 10
+            else:
+                total += int(rank)
+        total += aces  # count all aces as 1
+        return aces > 0 and total + 10 <= 21
+
     def __str__(self):
         """
         Returns a string representation of the hand.
         """
         return ", ".join([f"{rank} of {suit}" for rank, suit in self.cards])
+
+
+def _card_value(rank: str) -> int:
+    """Return the blackjack value of a card rank."""
+    if rank in ("J", "Q", "K", "10"):
+        return 10
+    if rank == "A":
+        return 11
+    return int(rank)
+
+
+def _normalize_rank(rank: str) -> str:
+    """Map face cards to '10' for pair comparisons."""
+    return "10" if rank in ("J", "Q", "K") else rank
+
+
+def basic_strategy_hint(hand: Hand, dealer_upcard: str, can_split: bool = True, can_double: bool = True) -> str:
+    """Return the basic strategy recommendation for a given situation."""
+    dealer = _card_value(dealer_upcard)
+
+    if can_split and hand.is_pair():
+        rank = _normalize_rank(hand.cards[0][0])
+        if rank == "A":
+            return "Split"
+        if rank == "10":
+            return "Stand"
+        if rank == "9":
+            if dealer in [2, 3, 4, 5, 6, 8, 9]:
+                return "Split"
+            return "Stand"
+        if rank == "8":
+            return "Split"
+        if rank == "7":
+            return "Split" if 2 <= dealer <= 7 else "Hit"
+        if rank == "6":
+            return "Split" if 2 <= dealer <= 6 else "Hit"
+        if rank == "5":
+            return "Double" if can_double and 2 <= dealer <= 9 else "Hit"
+        if rank == "4":
+            return "Split" if dealer in [5, 6] else "Hit"
+        if rank in {"3", "2"}:
+            return "Split" if 2 <= dealer <= 7 else "Hit"
+
+    if hand.is_soft():
+        total = hand.value
+        if total >= 19:
+            if total == 19 and dealer == 6 and can_double:
+                return "Double"
+            return "Stand"
+        if total == 18:
+            if dealer in [3, 4, 5, 6]:
+                return "Double" if can_double else "Stand"
+            if dealer in [2, 7, 8]:
+                return "Stand"
+            return "Hit"
+        if total == 17:
+            return "Double" if can_double and 3 <= dealer <= 6 else "Hit"
+        if total in (15, 16):
+            return "Double" if can_double and 4 <= dealer <= 6 else "Hit"
+        if total in (13, 14):
+            return "Double" if can_double and dealer in [5, 6] else "Hit"
+
+    total = hand.value
+    if total >= 17:
+        return "Stand"
+    if 13 <= total <= 16:
+        return "Stand" if 2 <= dealer <= 6 else "Hit"
+    if total == 12:
+        return "Stand" if 4 <= dealer <= 6 else "Hit"
+    if total == 11:
+        return "Double" if can_double and 2 <= dealer <= 10 else "Hit"
+    if total == 10:
+        return "Double" if can_double and 2 <= dealer <= 9 else "Hit"
+    if total == 9:
+        return "Double" if can_double and 3 <= dealer <= 6 else "Hit"
+    return "Hit"
 
 def play_game():
     """Main loop for a Blackjack session with a fixed bet."""
@@ -144,45 +238,91 @@ def play_game():
         bankroll.bet(bet)
         print(f"Betting £{bet}")
 
-        player_hand = Hand()
+        player_hands = [Hand()]
         dealer_hand = Hand()
         for _ in range(2):
-            player_hand.add_card(deck.deal())
+            player_hands[0].add_card(deck.deal())
             dealer_hand.add_card(deck.deal())
+        bets = [bet]
 
-        # Player's turn
-        while True:
-            print("\n--- Your Turn ---")
-            print(f"Your hand: {player_hand} (Value: {player_hand.value})")
-            print(
-                f"Dealer's visible card: {dealer_hand.cards[0][0]} of {dealer_hand.cards[0][1]}"
-            )
+        hand_index = 0
+        while hand_index < len(player_hands):
+            hand = player_hands[hand_index]
+            while True:
+                print("\n--- Your Turn ---")
+                print(f"Hand {hand_index + 1}: {hand} (Value: {hand.value})")
+                print(
+                    f"Dealer's visible card: {dealer_hand.cards[0][0]} of {dealer_hand.cards[0][1]}"
+                )
 
-            if player_hand.value > 21:
-                print("You busted!")
-                break
-            if player_hand.value == 21:
-                print("Blackjack!")
-                break
+                if hand.value > 21:
+                    print("You busted!")
+                    break
+                if hand.value == 21:
+                    if len(hand.cards) == 2:
+                        print("Blackjack!")
+                    else:
+                        print("21!")
+                    break
 
-            print("Do you want to (h)it or (s)tand? ", end="", flush=True)
-            choice = getch()
-            if choice == "\x1b":
-                bankroll.push(bet)
-                print("\nExiting game.")
-                print(f"Final bankroll: £{bankroll.amount}")
-                return
-            choice = choice.lower()
-            print(choice)
-            if choice == "h":
-                player_hand.add_card(deck.deal())
-            elif choice == "s":
-                break
-            else:
-                print("Invalid input. Please enter 'h' or 's'.")
+                can_split = (
+                    hand.is_pair()
+                    and len(player_hands) == 1
+                    and len(hand.cards) == 2
+                    and bankroll.amount >= bets[hand_index]
+                )
+                can_double = (
+                    len(hand.cards) == 2 and bankroll.amount >= bets[hand_index]
+                )
+                hint = basic_strategy_hint(
+                    hand, dealer_hand.cards[0][0], can_split, can_double
+                )
+                options = "(h)it or (s)tand"
+                if can_double:
+                    options += ", (d)ouble"
+                if can_split:
+                    options += ", s(p)lit"
+                print(f"Hint: {hint}")
+                print(f"Do you want to {options}? ", end="", flush=True)
+                choice = getch()
+                if choice == "\x1b":
+                    bankroll.push(bets[hand_index])
+                    if hand_index + 1 < len(player_hands):
+                        bankroll.push(sum(bets[hand_index + 1:]))
+                    print("\nExiting game.")
+                    print(f"Final bankroll: £{bankroll.amount}")
+                    return
+                choice = choice.lower()
+                print(choice)
+                if choice == "h":
+                    hand.add_card(deck.deal())
+                elif choice == "s":
+                    break
+                elif choice == "d" and can_double:
+                    bankroll.bet(bets[hand_index])
+                    bets[hand_index] *= 2
+                    hand.add_card(deck.deal())
+                    break
+                elif choice == "p" and can_split:
+                    bankroll.bet(bets[hand_index])
+                    card1 = hand.cards[0]
+                    card2 = hand.cards[1]
+                    new_hand1 = Hand()
+                    new_hand1.add_card(card1)
+                    new_hand1.add_card(deck.deal())
+                    new_hand2 = Hand()
+                    new_hand2.add_card(card2)
+                    new_hand2.add_card(deck.deal())
+                    player_hands = [new_hand1, new_hand2]
+                    bets = [bets[hand_index], bets[hand_index]]
+                    hand_index = 0
+                    hand = player_hands[hand_index]
+                    continue
+                else:
+                    print("Invalid input. Please try again.")
+            hand_index += 1
 
-        # Dealer's turn (only if player hasn't busted)
-        if player_hand.value <= 21:
+        if any(h.value <= 21 for h in player_hands):
             print("\n--- Dealer's Turn ---")
             print(f"Dealer's full hand: {dealer_hand} (Value: {dealer_hand.value})")
             while dealer_hand.value < 17:
@@ -194,12 +334,12 @@ def play_game():
                     break
             print(f"Dealer stands with a value of {dealer_hand.value}.")
 
-        # Determine and announce the winner
-        result = determine_winner(player_hand, dealer_hand)
-        if result == "player":
-            bankroll.win(bet)
-        elif result == "push":
-            bankroll.push(bet)
+        for h, b in zip(player_hands, bets):
+            result = determine_winner(h, dealer_hand)
+            if result == "player":
+                bankroll.win(b)
+            elif result == "push":
+                bankroll.push(b)
 
         if bankroll.amount < bet:
             print("You're out of money!")
