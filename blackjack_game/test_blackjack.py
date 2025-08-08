@@ -36,6 +36,16 @@ class TestDeck(unittest.TestCase):
         self.assertEqual(card, top_card)
         self.assertNotIn(card, deck.cards)
 
+    def test_deck_deal_empty(self):
+        """
+        Tests that dealing from an empty deck raises an error.
+        """
+        deck = Deck()
+        for _ in range(52):
+            deck.deal()
+        with self.assertRaises(IndexError):
+            deck.deal()
+
 class TestHand(unittest.TestCase):
     """
     Test suite for the Hand class.
