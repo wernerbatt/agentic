@@ -327,6 +327,15 @@ def play_game():
                 if choice == "t":
                     print(f"Hint: {hint} ({reason})")
                     continue
+
+                action_map = {"h": "Hit", "s": "Stand", "d": "Double", "p": "Split"}
+                player_action = action_map.get(choice)
+
+                if player_action and player_action != hint:
+                    print(
+                        f"\033[91mYou chose to {player_action}, but the optimal move was to {hint.lower()}.\033[0m"
+                    )
+
                 if choice == "h":
                     hand.add_card(deck.deal())
                 elif choice == "s":
@@ -397,24 +406,24 @@ def determine_winner(player_hand, dealer_hand):
     player_value = player_hand.value
     dealer_value = dealer_hand.value
 
-    print("\n--- Game Over ---")
+    print("\n--- Results ---")
     print(f"Your final hand: {player_hand} (Value: {player_value})")
     print(f"Dealer's final hand: {dealer_hand} (Value: {dealer_value})")
 
     if player_value > 21:
         # This case is handled in the player loop, but we keep it for clarity
-        print("You busted! Dealer wins.")
+        print("\033[91mYou busted! Dealer wins.\033[0m")
         return "dealer"
     if dealer_value > 21:
-        print("Dealer busted! You win!")
+        print("\033[92mDealer busted! You win!\033[0m")
         return "player"
     if player_value > dealer_value:
-        print("Congratulations, you win!")
+        print("\033[92mCongratulations, you win!\033[0m")
         return "player"
     if dealer_value > player_value:
-        print("Dealer wins!")
+        print("\033[91mDealer wins!\033[0m")
         return "dealer"
-    print("It's a push (a tie)!")
+    print("\033[93mIt's a push (a tie)!\033[0m")
     return "push"
 
 
