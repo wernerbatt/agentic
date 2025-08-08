@@ -1,5 +1,6 @@
 import unittest
 from blackjack import Deck, Hand, Bankroll
+from blackjack import basic_strategy_hint
 
 class TestDeck(unittest.TestCase):
     """
@@ -112,6 +113,29 @@ class TestBankroll(unittest.TestCase):
         bank = Bankroll(5)
         with self.assertRaises(ValueError):
             bank.bet(10)
+
+
+class TestStrategy(unittest.TestCase):
+    def test_pair_split_hint(self):
+        hand = Hand()
+        hand.add_card(("8", "Hearts"))
+        hand.add_card(("8", "Diamonds"))
+        hint = basic_strategy_hint(hand, "5")
+        self.assertEqual(hint, "Split")
+
+    def test_soft_hint(self):
+        hand = Hand()
+        hand.add_card(("A", "Hearts"))
+        hand.add_card(("7", "Clubs"))
+        hint = basic_strategy_hint(hand, "9")
+        self.assertEqual(hint, "Hit")
+
+    def test_hard_hint(self):
+        hand = Hand()
+        hand.add_card(("5", "Hearts"))
+        hand.add_card(("6", "Clubs"))
+        hint = basic_strategy_hint(hand, "6")
+        self.assertEqual(hint, "Double")
 
 if __name__ == '__main__':
     unittest.main()
