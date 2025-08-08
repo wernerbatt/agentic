@@ -312,18 +312,21 @@ def play_game():
                     options += ", (d)ouble"
                 if can_split:
                     options += ", s(p)lit"
-                print(f"Hint: {hint} ({reason})")
+                options += ", show (t)ip"
                 print(f"Do you want to {options}? ", end="", flush=True)
                 choice = getch()
                 if choice == "\x1b":
                     bankroll.push(bets[hand_index])
                     if hand_index + 1 < len(player_hands):
-                        bankroll.push(sum(bets[hand_index + 1:]))
+                        bankroll.push(sum(bets[hand_index + 1 :]))
                     print("\nExiting game.")
                     print(f"Final bankroll: £{bankroll.amount}")
                     return
                 choice = choice.lower()
                 print(choice)
+                if choice == "t":
+                    print(f"Hint: {hint} ({reason})")
+                    continue
                 if choice == "h":
                     hand.add_card(deck.deal())
                 elif choice == "s":
