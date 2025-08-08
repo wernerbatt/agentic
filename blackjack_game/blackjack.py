@@ -165,66 +165,96 @@ def _normalize_rank(rank: str) -> str:
     return "10" if rank in ("J", "Q", "K") else rank
 
 
-def basic_strategy_hint(hand: Hand, dealer_upcard: str, can_split: bool = True, can_double: bool = True) -> str:
-    """Return the basic strategy recommendation for a given situation."""
+def basic_strategy_hint(
+    hand: Hand, dealer_upcard: str, can_split: bool = True, can_double: bool = True
+) -> tuple[str, str]:
+    """Return the basic strategy recommendation and a short reason."""
     dealer = _card_value(dealer_upcard)
 
     if can_split and hand.is_pair():
         rank = _normalize_rank(hand.cards[0][0])
         if rank == "A":
-            return "Split"
+            return "Split", "Always split aces."
         if rank == "10":
-            return "Stand"
+            return "Stand", "Never split tens; stand instead."
         if rank == "9":
             if dealer in [2, 3, 4, 5, 6, 8, 9]:
-                return "Split"
-            return "Stand"
+                return "Split", f"Split 9s against dealer {dealer_upcard}."
+            return "Stand", f"Stand on 18 against dealer {dealer_upcard}."
         if rank == "8":
-            return "Split"
+            return "Split", "Pair of 8s should always be split."
         if rank == "7":
-            return "Split" if 2 <= dealer <= 7 else "Hit"
+            return (
+                "Split" if 2 <= dealer <= 7 else "Hit",
+                f"Pair of 7s vs dealer {dealer_upcard}.",
+            )
         if rank == "6":
-            return "Split" if 2 <= dealer <= 6 else "Hit"
+            return (
+                "Split" if 2 <= dealer <= 6 else "Hit",
+                f"Pair of 6s vs dealer {dealer_upcard}.",
+            )
         if rank == "5":
-            return "Double" if can_double and 2 <= dealer <= 9 else "Hit"
+            return (
+                "Double" if can_double and 2 <= dealer <= 9 else "Hit",
+                f"Pair of 5s vs dealer {dealer_upcard}.",
+            )
         if rank == "4":
-            return "Split" if dealer in [5, 6] else "Hit"
+            return (
+                "Split" if dealer in [5, 6] else "Hit",
+                f"Pair of 4s vs dealer {dealer_upcard}.",
+            )
         if rank in {"3", "2"}:
-            return "Split" if 2 <= dealer <= 7 else "Hit"
+            return (
+                "Split" if 2 <= dealer <= 7 else "Hit",
+                f"Pair of {rank}s vs dealer {dealer_upcard}.",
+            )
 
     if hand.is_soft():
         total = hand.value
         if total >= 19:
             if total == 19 and dealer == 6 and can_double:
-                return "Double"
-            return "Stand"
+                return "Double", "Soft 19 doubles against dealer 6."
+            return "Stand", f"Soft {total} should stand."
         if total == 18:
             if dealer in [3, 4, 5, 6]:
-                return "Double" if can_double else "Stand"
+                action = "Double" if can_double else "Stand"
+                reason = "Double" if can_double else "Stand"
+                return action, f"Soft 18 {reason.lower()}s against dealer {dealer_upcard}."
             if dealer in [2, 7, 8]:
-                return "Stand"
-            return "Hit"
+                return "Stand", f"Soft 18 stands against dealer {dealer_upcard}."
+            return "Hit", f"Soft 18 hits against dealer {dealer_upcard}."
         if total == 17:
-            return "Double" if can_double and 3 <= dealer <= 6 else "Hit"
+            action = "Double" if can_double and 3 <= dealer <= 6 else "Hit"
+            return action, f"Soft 17 vs dealer {dealer_upcard}."
         if total in (15, 16):
-            return "Double" if can_double and 4 <= dealer <= 6 else "Hit"
+            action = "Double" if can_double and 4 <= dealer <= 6 else "Hit"
+            return action, f"Soft {total} vs dealer {dealer_upcard}."
         if total in (13, 14):
-            return "Double" if can_double and dealer in [5, 6] else "Hit"
+            action = "Double" if can_double and dealer in [5, 6] else "Hit"
+            return action, f"Soft {total} vs dealer {dealer_upcard}."
 
     total = hand.value
     if total >= 17:
-        return "Stand"
+        return "Stand", f"Hard {total} stands." 
     if 13 <= total <= 16:
-        return "Stand" if 2 <= dealer <= 6 else "Hit"
+        action = "Stand" if 2 <= dealer <= 6 else "Hit"
+        return action, f"Hard {total} {action.lower()}s against dealer {dealer_upcard}."
     if total == 12:
-        return "Stand" if 4 <= dealer <= 6 else "Hit"
+        action = "Stand" if 4 <= dealer <= 6 else "Hit"
+        return action, f"Hard 12 {action.lower()}s against dealer {dealer_upcard}."
     if total == 11:
-        return "Double" if can_double and 2 <= dealer <= 10 else "Hit"
+        action = "Double" if can_double and 2 <= dealer <= 10 else "Hit"
+        verb = "doubles" if action == "Double" else "hits"
+        return action, f"Hard 11 {verb} against dealer {dealer_upcard}."
     if total == 10:
-        return "Double" if can_double and 2 <= dealer <= 9 else "Hit"
+        action = "Double" if can_double and 2 <= dealer <= 9 else "Hit"
+        verb = "doubles" if action == "Double" else "hits"
+        return action, f"Hard 10 {verb} against dealer {dealer_upcard}."
     if total == 9:
-        return "Double" if can_double and 3 <= dealer <= 6 else "Hit"
-    return "Hit"
+        action = "Double" if can_double and 3 <= dealer <= 6 else "Hit"
+        verb = "doubles" if action == "Double" else "hits"
+        return action, f"Hard 9 {verb} against dealer {dealer_upcard}."
+    return "Hit", f"Hard {total} hits against dealer {dealer_upcard}."
 
 def play_game():
     """Main loop for a Blackjack session with a fixed bet."""
@@ -274,7 +304,7 @@ def play_game():
                 can_double = (
                     len(hand.cards) == 2 and bankroll.amount >= bets[hand_index]
                 )
-                hint = basic_strategy_hint(
+                hint, reason = basic_strategy_hint(
                     hand, dealer_hand.cards[0][0], can_split, can_double
                 )
                 options = "(h)it or (s)tand"
@@ -282,7 +312,7 @@ def play_game():
                     options += ", (d)ouble"
                 if can_split:
                     options += ", s(p)lit"
-                print(f"Hint: {hint}")
+                print(f"Hint: {hint} ({reason})")
                 print(f"Do you want to {options}? ", end="", flush=True)
                 choice = getch()
                 if choice == "\x1b":
