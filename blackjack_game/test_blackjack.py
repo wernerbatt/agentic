@@ -120,22 +120,25 @@ class TestStrategy(unittest.TestCase):
         hand = Hand()
         hand.add_card(("8", "Hearts"))
         hand.add_card(("8", "Diamonds"))
-        hint = basic_strategy_hint(hand, "5")
+        hint, reason = basic_strategy_hint(hand, "5")
         self.assertEqual(hint, "Split")
+        self.assertEqual(reason, "Pair of 8s should always be split.")
 
     def test_soft_hint(self):
         hand = Hand()
         hand.add_card(("A", "Hearts"))
         hand.add_card(("7", "Clubs"))
-        hint = basic_strategy_hint(hand, "9")
+        hint, reason = basic_strategy_hint(hand, "9")
         self.assertEqual(hint, "Hit")
+        self.assertEqual(reason, "Soft 18 hits against dealer 9.")
 
     def test_hard_hint(self):
         hand = Hand()
         hand.add_card(("5", "Hearts"))
         hand.add_card(("6", "Clubs"))
-        hint = basic_strategy_hint(hand, "6")
+        hint, reason = basic_strategy_hint(hand, "6")
         self.assertEqual(hint, "Double")
+        self.assertEqual(reason, "Hard 11 doubles against dealer 6.")
 
 if __name__ == '__main__':
     unittest.main()
